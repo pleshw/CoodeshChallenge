@@ -51,17 +51,22 @@ These business rules define quantity-based discounting tiers and limitations:
 ### Prerequisites
 
 * [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-* [Docker](https://www.docker.com/) (for PostgreSQL — no local Postgres install needed)
+* [Docker](https://www.docker.com/) (for PostgreSQL and RabbitMQ — no local install of either needed)
 * The [`dotnet-ef`](https://learn.microsoft.com/en-us/ef/core/cli/dotnet) global tool: `dotnet tool install --global dotnet-ef`
 
-### 1. Start the database
+### 1. Start the database and message broker
 
 ```bash
 cd template/backend
-docker compose up -d ambev.developerevaluation.database
+docker compose up -d ambev.developerevaluation.database ambev.developerevaluation.messagebroker
 ```
 
-This starts a PostgreSQL 13 container on `localhost:5432` (database `developer_evaluation`, user `developer`, password `ev@luAt10n` — already set in `docker-compose.yml` and matching `src/Ambev.DeveloperEvaluation.WebApi/appsettings.json`'s `ConnectionStrings:DefaultConnection`). Nothing to configure — the defaults just work.
+This starts:
+
+* PostgreSQL 13 on `localhost:5432` (database `developer_evaluation`, user `developer`, password `ev@luAt10n` — already set in `docker-compose.yml` and matching `src/Ambev.DeveloperEvaluation.WebApi/appsettings.json`'s `ConnectionStrings:DefaultConnection`)
+* RabbitMQ 3 (management plugin) on `localhost:5672` (AMQP, same `developer`/`ev@luAt10n` credentials, matching `ConnectionStrings:RabbitMq`) with its management UI at [http://localhost:15672](http://localhost:15672)
+
+Nothing to configure — the defaults just work.
 
 ### 2. Apply database migrations
 
@@ -110,7 +115,7 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 * Full Sales CRUD (create, get by id, paginated/filtered list, update, delete) plus dedicated cancel-sale and cancel-item actions
 * External Identities pattern for Customer/Branch/Product (denormalized id + name, no cross-domain foreign keys)
 * Quantity-based discount business rules, enforced both by request validation and as a domain invariant on the `Sale` aggregate (see [Sale.cs](/template/backend/src/Ambev.DeveloperEvaluation.Domain/Entities/Sale.cs))
-* `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` events, published via MediatR and written to the application log
+* `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` events, published to RabbitMQ via Rebus and consumed by dedicated handlers that write to the application log
 * Standardized `{ type, error, detail }` error responses for not-found, business-rule-violation, and authentication-failure cases
 * Unit tests covering the discount tiers, cancellation behavior, validators, and command handlers
 
@@ -120,6 +125,7 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 * List filtering supports pagination, ordering, cancelled/customer/branch/date-range filters, but not the full generic wildcard/`_min`/`_max` query contract described in [General API](/.doc/general-api.md)
 * Only unit tests are included; the `tests/Ambev.DeveloperEvaluation.Integration` and `tests/Ambev.DeveloperEvaluation.Functional` projects are still empty scaffolding
 * MongoDB and Redis services are defined in `docker-compose.yml` but unused — PostgreSQL via EF Core was the chosen data store
+* RabbitMQ is deployed with default/no-op durability tuning (single node, no persistence policy beyond RabbitMQ's own defaults) — fine for local dev and for this challenge's scope, not production-hardened
 * The `Sales` endpoints' JSON responses were fixed to avoid a double-wrapping bug in `BaseController`'s response helpers; the same fix hasn't been applied to the pre-existing `Users`/`Auth` endpoints, which still return a nested `data.data` envelope
 
 ## Overview
