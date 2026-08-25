@@ -37,6 +37,11 @@ namespace Ambev.DeveloperEvaluation.WebApi.Middleware
                 await WriteResponseAsync(context, StatusCodes.Status404NotFound, "ResourceNotFound",
                     "Resource not found", ex.Message);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                await WriteResponseAsync(context, StatusCodes.Status401Unauthorized, "AuthenticationError",
+                    "Invalid authentication credentials", ex.Message);
+            }
         }
 
         private static Task WriteResponseAsync(HttpContext context, int statusCode, string type, string error, string detail)
