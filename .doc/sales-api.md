@@ -129,9 +129,16 @@ domains don't exist in this service.
 ### Domain Events
 
 `SaleCreated`, `SaleModified`, `SaleCancelled` and `ItemCancelled` are
-published internally (via MediatR) after each corresponding write succeeds.
-No message broker is used — each event is written to the application log
-(see `Application/Events/` and `Application/Events/Handlers/`).
+published to a `sales-events` queue on RabbitMQ via [Rebus](https://github.com/rebus-org/Rebus)
+after each corresponding write succeeds. The same process also subscribes to
+and consumes those events (see `Program.cs`'s startup `bus.Subscribe<T>()`
+calls); each dedicated handler in `Application/Events/Handlers/` just writes
+a line to the application log, but the events do travel through a real
+message broker round-trip (publish → RabbitMQ → consume), not an in-process
+shortcut. See `IoC/ModuleInitializers/MessagingModuleInitializer.cs` for the
+Rebus/RabbitMQ wiring, and the `ambev.developerevaluation.messagebroker`
+service in `docker-compose.yml` (management UI at `http://localhost:15672`,
+credentials `developer`/`ev@luAt10n`) to inspect the queue directly.
 
 <br>
 <div style="display: flex; justify-content: space-between;">

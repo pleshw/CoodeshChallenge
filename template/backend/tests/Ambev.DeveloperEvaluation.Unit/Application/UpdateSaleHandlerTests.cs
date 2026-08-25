@@ -5,8 +5,8 @@ using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using AutoMapper;
 using FluentAssertions;
-using MediatR;
 using NSubstitute;
+using Rebus.Bus;
 using Xunit;
 
 namespace Ambev.DeveloperEvaluation.Unit.Application;
@@ -18,15 +18,15 @@ public class UpdateSaleHandlerTests
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
-    private readonly IMediator _mediator;
+    private readonly IBus _bus;
     private readonly UpdateSaleHandler _handler;
 
     public UpdateSaleHandlerTests()
     {
         _saleRepository = Substitute.For<ISaleRepository>();
         _mapper = Substitute.For<IMapper>();
-        _mediator = Substitute.For<IMediator>();
-        _handler = new UpdateSaleHandler(_saleRepository, _mapper, _mediator);
+        _bus = Substitute.For<IBus>();
+        _handler = new UpdateSaleHandler(_saleRepository, _mapper, _bus);
 
         _saleRepository.UpdateAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.Arg<Sale>());
@@ -103,6 +103,6 @@ public class UpdateSaleHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Then
-        await _mediator.Received(1).Publish(Arg.Any<SaleModifiedEvent>(), Arg.Any<CancellationToken>());
+        await _bus.Received(1).Publish(Arg.Any<SaleModifiedEvent>());
     }
 }

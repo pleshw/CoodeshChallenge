@@ -1,8 +1,6 @@
-using MediatR;
-
 namespace Ambev.DeveloperEvaluation.Application.Events;
 
-public class SaleCancelledEvent : INotification
+public class SaleCancelledEvent
 {
     public Guid SaleId { get; }
 

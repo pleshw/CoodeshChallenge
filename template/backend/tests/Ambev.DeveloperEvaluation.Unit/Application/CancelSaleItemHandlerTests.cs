@@ -3,8 +3,8 @@ using Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentAssertions;
-using MediatR;
 using NSubstitute;
+using Rebus.Bus;
 using Xunit;
 
 namespace Ambev.DeveloperEvaluation.Unit.Application;
@@ -15,14 +15,14 @@ namespace Ambev.DeveloperEvaluation.Unit.Application;
 public class CancelSaleItemHandlerTests
 {
     private readonly ISaleRepository _saleRepository;
-    private readonly IMediator _mediator;
+    private readonly IBus _bus;
     private readonly CancelSaleItemHandler _handler;
 
     public CancelSaleItemHandlerTests()
     {
         _saleRepository = Substitute.For<ISaleRepository>();
-        _mediator = Substitute.For<IMediator>();
-        _handler = new CancelSaleItemHandler(_saleRepository, _mediator);
+        _bus = Substitute.For<IBus>();
+        _handler = new CancelSaleItemHandler(_saleRepository, _bus);
 
         _saleRepository.UpdateAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.Arg<Sale>());
@@ -88,6 +88,6 @@ public class CancelSaleItemHandlerTests
         result.IsCancelled.Should().BeTrue();
         result.SaleTotalAmount.Should().Be(item2.TotalAmount);
         sale.IsCancelled.Should().BeFalse();
-        await _mediator.Received(1).Publish(Arg.Any<ItemCancelledEvent>(), Arg.Any<CancellationToken>());
+        await _bus.Received(1).Publish(Arg.Any<ItemCancelledEvent>());
     }
 }

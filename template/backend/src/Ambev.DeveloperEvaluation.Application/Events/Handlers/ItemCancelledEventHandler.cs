@@ -1,9 +1,9 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
+using Rebus.Handlers;
 
 namespace Ambev.DeveloperEvaluation.Application.Events.Handlers;
 
-public class ItemCancelledEventHandler : INotificationHandler<ItemCancelledEvent>
+public class ItemCancelledEventHandler : IHandleMessages<ItemCancelledEvent>
 {
     private readonly ILogger<ItemCancelledEventHandler> _logger;
 
@@ -12,7 +12,7 @@ public class ItemCancelledEventHandler : INotificationHandler<ItemCancelledEvent
         _logger = logger;
     }
 
-    public Task Handle(ItemCancelledEvent notification, CancellationToken cancellationToken)
+    public Task Handle(ItemCancelledEvent notification)
     {
         _logger.LogInformation(
             "ItemCancelled: item {ItemId} (product {ProductName}) on sale {SaleId} cancelled at {OccurredAt}",
