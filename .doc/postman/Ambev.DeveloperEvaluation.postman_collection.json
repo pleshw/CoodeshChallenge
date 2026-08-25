@@ -116,6 +116,57 @@
             }
           ],
           "response": []
+        },
+        {
+          "name": "Health ready check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health/ready", "host": ["{{baseUrl}}"], "path": ["health", "ready"] },
+            "description": "Opens a real connection to Postgres and RabbitMQ — see PostgresHealthCheck.cs / RabbitMqHealthCheck.cs. Returns 503 if either is unreachable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and both dependencies are Healthy', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health live check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health/live", "host": ["{{baseUrl}}"], "path": ["health", "live"] },
+            "description": "Dependency-free liveness probe — always Healthy as long as the process is responding, regardless of Postgres/RabbitMQ state."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and Healthy', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
         }
       ]
     },
