@@ -48,36 +48,55 @@ These business rules define quantity-based discounting tiers and limitations:
 
 ## Getting Started
 
-### Prerequisites
+### Option A: one-command full stack (recommended)
 
-* [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-* [Docker](https://www.docker.com/) (for PostgreSQL and RabbitMQ — no local install of either needed)
-* The [`dotnet-ef`](https://learn.microsoft.com/en-us/ef/core/cli/dotnet) global tool: `dotnet tool install --global dotnet-ef`
+Requires only [Docker](https://www.docker.com/).
 
-### 1. Start the database and message broker
+```bash
+cd template/backend
+docker compose up -d
+```
+
+This builds the API image, starts PostgreSQL and RabbitMQ, waits for both to
+report healthy (`depends_on: condition: service_healthy`), then starts the
+API — which applies any pending EF Core migrations itself on boot (gated by
+the `RUN_MIGRATIONS_ON_STARTUP` env var, set only for this containerized
+path) before serving traffic. No separate migration step, no manual
+`localhost` vs. container-hostname connection-string juggling.
+
+* API: [http://localhost:5119](http://localhost:5119) (Swagger at `/swagger`)
+* RabbitMQ management UI: [http://localhost:15672](http://localhost:15672) (`developer`/`ev@luAt10n`)
+* PostgreSQL: `localhost:5432` (`developer_evaluation` / `developer` / `ev@luAt10n`)
+
+Rebuild after changing code: `docker compose up -d --build`. Tear everything
+down (keeping data): `docker compose down`; including the database volume:
+`docker compose down -v`.
+
+### Option B: run the API on bare metal (faster edit/run loop while coding)
+
+Skips the Docker image rebuild step, at the cost of a couple more manual commands.
+
+**Prerequisites:** [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), Docker (for Postgres/RabbitMQ only), the [`dotnet-ef`](https://learn.microsoft.com/en-us/ef/core/cli/dotnet) global tool (`dotnet tool install --global dotnet-ef`).
+
+#### 1. Start the database and message broker
 
 ```bash
 cd template/backend
 docker compose up -d ambev.developerevaluation.database ambev.developerevaluation.messagebroker
 ```
 
-This starts:
+Nothing to configure — the defaults in `docker-compose.yml` already match `src/Ambev.DeveloperEvaluation.WebApi/appsettings.json`'s `ConnectionStrings`.
 
-* PostgreSQL 13 on `localhost:5432` (database `developer_evaluation`, user `developer`, password `ev@luAt10n` — already set in `docker-compose.yml` and matching `src/Ambev.DeveloperEvaluation.WebApi/appsettings.json`'s `ConnectionStrings:DefaultConnection`)
-* RabbitMQ 3 (management plugin) on `localhost:5672` (AMQP, same `developer`/`ev@luAt10n` credentials, matching `ConnectionStrings:RabbitMq`) with its management UI at [http://localhost:15672](http://localhost:15672)
-
-Nothing to configure — the defaults just work.
-
-### 2. Apply database migrations
+#### 2. Apply database migrations
 
 ```bash
 cd template/backend/src/Ambev.DeveloperEvaluation.WebApi
 dotnet ef database update --project ../Ambev.DeveloperEvaluation.ORM/Ambev.DeveloperEvaluation.ORM.csproj --startup-project Ambev.DeveloperEvaluation.WebApi.csproj --context DefaultContext
 ```
 
-This creates the `Users`, `Sales` and `SaleItems` tables.
+This creates the `Users`, `Sales` and `SaleItems` tables. (`RUN_MIGRATIONS_ON_STARTUP` from Option A is not set here on purpose, so this step stays explicit for local development — see `Program.cs`.)
 
-### 3. Run the API
+#### 3. Run the API
 
 ```bash
 cd template/backend/src/Ambev.DeveloperEvaluation.WebApi
@@ -87,10 +106,6 @@ dotnet run
 The API starts on the URL printed in the console (see `Properties/launchSettings.json`; typically `http://localhost:5298` or similar). Swagger UI is available at `/swagger` in the Development environment.
 
 > **Note:** this repo targets `net8.0`. If your machine only has a newer .NET runtime installed (no .NET 8 runtime), prefix the `dotnet ef`/`dotnet run` commands above with `DOTNET_ROLL_FORWARD=LatestMajor` (PowerShell: `$env:DOTNET_ROLL_FORWARD="LatestMajor"`) to let it run on the newer runtime instead of installing .NET 8 separately.
-
-### Alternative: full Docker Compose stack
-
-`docker-compose.yml` also defines an `ambev.developerevaluation.webapi` service. It builds and runs, but has not been fully wired for one-command startup (its connection string still needs to target the `ambev.developerevaluation.database` service hostname instead of `localhost` when running inside the Docker network) — running the API locally with `dotnet run` against the dockerized database, as described above, is the supported path for now.
 
 ## Running Tests
 
@@ -120,12 +135,12 @@ Runs the xUnit unit test suite (entity behavior, validators, and command handler
   * This was a deliberate decision: the Users/Auth feature (and its `Role` enum) already existed in the template, but nothing consumed the JWT it issued — no endpoint checked it. Rather than leave a working login system fully disconnected, I wired it into the Sales endpoints, the actual deliverable of this project. Note it only requires *any* authenticated user today — it doesn't yet restrict by `Role` (e.g. only `Manager`/`Admin` can cancel a sale); that would be a natural next step but wasn't required for this challenge
 * Standardized `{ type, error, detail }` error responses for not-found, business-rule-violation, and authentication-failure cases
 * Real dependency health checks: `GET /health/ready` actually opens a connection to Postgres and to RabbitMQ (not a hardcoded "always healthy" placeholder) and returns `503` if either is unreachable; `GET /health/live` stays dependency-free on purpose, since a liveness probe shouldn't fail just because a downstream service is down — see [PostgresHealthCheck.cs](/template/backend/src/Ambev.DeveloperEvaluation.WebApi/HealthChecks/PostgresHealthCheck.cs) / [RabbitMqHealthCheck.cs](/template/backend/src/Ambev.DeveloperEvaluation.WebApi/HealthChecks/RabbitMqHealthCheck.cs)
+* One-command full stack: `docker compose up -d` builds the API image, waits for Postgres and RabbitMQ to be healthy (`depends_on: condition: service_healthy`), applies pending EF Core migrations on boot, and serves the API — verified from a completely fresh `docker compose down -v` state with the full Postman collection passing end-to-end against the containerized instance
 * A few pre-existing bugs found via manual/Postman testing were fixed along the way (all in the `Users` feature, none in `Sales`): `POST /api/Users` and `GET /api/Users/{id}` were both missing AutoMapper configuration for the user's `name` (and `GetUser` was missing its `Result → Response` mapping entirely, throwing on every call); `POST /api/Users` with a duplicate email threw an unhandled `500` with an exposed stack trace instead of a clean `409 Conflict`
 * Unit tests covering the discount tiers, cancellation behavior, validators, and command handlers
 
 **Known limitations / what I'd do with more time:**
 
-* The full multi-container `docker compose up` flow (API + Postgres together) isn't wired end-to-end yet — see the note under Getting Started
 * List filtering supports pagination, ordering, cancelled/customer/branch/date-range filters, but not the full generic wildcard/`_min`/`_max` query contract described in [General API](/.doc/general-api.md)
 * Only unit tests are included; the `tests/Ambev.DeveloperEvaluation.Integration` and `tests/Ambev.DeveloperEvaluation.Functional` projects are still empty scaffolding
 * MongoDB and Redis services are defined in `docker-compose.yml` but unused — PostgreSQL via EF Core was the chosen data store

@@ -76,6 +76,16 @@ public class Program
 
             var app = builder.Build();
 
+            if (builder.Configuration.GetValue<bool>("RUN_MIGRATIONS_ON_STARTUP"))
+            {
+                // Only set inside docker-compose's webapi service — the bare-metal `dotnet run`
+                // workflow described in the README keeps applying migrations manually via
+                // `dotnet ef database update`, since the runtime image has no `dotnet-ef` CLI.
+                using var migrationScope = app.Services.CreateScope();
+                var dbContext = migrationScope.ServiceProvider.GetRequiredService<DefaultContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
             var bus = app.Services.GetRequiredService<IBus>();
             await bus.Subscribe<SaleCreatedEvent>();
             await bus.Subscribe<SaleModifiedEvent>();

@@ -5,16 +5,15 @@
 Step-by-step walkthrough for exercising the whole Sales API by hand, either
 with `curl` (copy-paste ready below) or Swagger UI (equivalent noted at each
 step). Assumes the stack is already running — see
-[Getting Started](../README.md#getting-started) if not (Postgres + RabbitMQ
-via `docker compose up -d`, migrations applied, `dotnet run`).
+[Getting Started](../README.md#getting-started) if not; either `docker
+compose up -d` (the whole stack, API included) or the bare-metal `dotnet
+run` path both leave the API on `http://localhost:5119`, which every example
+below assumes.
 
 Prefer clicking through Postman instead? Import
 [`postman/Ambev.DeveloperEvaluation.postman_collection.json`](./postman/Ambev.DeveloperEvaluation.postman_collection.json) —
 it's the same walkthrough below as a ready-to-run collection (login/token
 handling included), also runnable headlessly via `newman run`.
-
-All examples assume the API is at `http://localhost:5119` — adjust to
-whatever port your `dotnet run` prints.
 
 ### 0. Open Swagger UI (optional, but the easiest way to follow along)
 
