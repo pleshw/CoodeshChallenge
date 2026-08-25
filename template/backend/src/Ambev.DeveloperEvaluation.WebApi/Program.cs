@@ -7,8 +7,10 @@ using Ambev.DeveloperEvaluation.Common.Validation;
 using Ambev.DeveloperEvaluation.IoC;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.WebApi.Middleware;
+using Ambev.DeveloperEvaluation.WebApi.Swagger;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Rebus.Bus;
 using Serilog;
 
@@ -29,7 +31,20 @@ public class Program
             builder.Services.AddEndpointsApiExplorer();
 
             builder.AddBasicHealthChecks();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "JWT token obtained from POST /api/Auth. Swagger adds the \"Bearer \" prefix automatically."
+                });
+
+                c.OperationFilter<AuthorizeOperationFilter>();
+            });
 
             builder.Services.AddDbContext<DefaultContext>(options =>
                 options.UseNpgsql(

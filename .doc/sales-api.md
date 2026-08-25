@@ -2,9 +2,14 @@
 
 ### Sales
 
-All Sale endpoints live under `/api/Sales`. Every response is wrapped in the
-standard envelope (`success`, `message`, `errors`), and unhandled errors use
-the `{ type, error, detail }` shape described in [General API](./general-api.md).
+All Sale endpoints live under `/api/Sales` and require authentication
+(`[Authorize]`) — send `Authorization: Bearer <token>`, where the token comes
+from `POST /api/Auth`. Every response is wrapped in the standard envelope
+(`success`, `message`, `errors`), and unhandled errors use the
+`{ type, error, detail }` shape described in [General API](./general-api.md).
+A missing/invalid token returns `401 Unauthorized`. In Swagger UI, click
+**Authorize** (top right) and paste the raw token — no need to type the
+`Bearer` prefix yourself.
 
 Money fields are `decimal`. `discount` is the applied percentage (`0`, `0.10`
 or `0.20`) as decided by the [business rules](../README.md#business-rules).

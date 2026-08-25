@@ -15,6 +15,7 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Sales.ReactivateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.UpdateSale;
 using AutoMapper;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Sales;
@@ -22,6 +23,7 @@ namespace Ambev.DeveloperEvaluation.WebApi.Features.Sales;
 /// <summary>
 /// Controller for managing sale operations
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SalesController : BaseController
