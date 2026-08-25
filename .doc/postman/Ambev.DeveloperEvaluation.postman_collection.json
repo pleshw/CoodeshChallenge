@@ -1,0 +1,613 @@
+{
+  "info": {
+    "_postman_id": "b2b4c9e0-6c1a-4b7a-9b0a-1a2b3c4d5e6f",
+    "name": "Ambev Developer Evaluation - Sales API",
+    "description": "Companion collection to /.doc/manual-testing-guide.md. Register a user, log in (the JWT is captured automatically into the `token` collection variable), then exercise every Sales endpoint including all four discount tiers. Import this file into Postman; only `baseUrl` (default http://localhost:5119) may need adjusting to match your `dotnet run` port.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5119", "type": "string" },
+    { "key": "testEmail", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "saleId", "value": "", "type": "string" },
+    { "key": "itemId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "00 - Auth & Setup",
+      "item": [
+        {
+          "name": "Register user",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"Coodesh@2026\",\n  \"phone\": \"+5511999999999\",\n  \"status\": 1,\n  \"role\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Users", "host": ["{{baseUrl}}"], "path": ["api", "Users"] },
+            "description": "status: 1 = Active. role: 1 = Customer, 2 = Manager, 3 = Admin. The email is generated fresh per run (pre-request script) so this collection can be re-run repeatedly without hitting the duplicate-email path — see the note at the bottom of this collection's description about why that path currently returns 500 instead of 400."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('testEmail', `testuser+${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"Coodesh@2026\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Auth", "host": ["{{baseUrl}}"], "path": ["api", "Auth"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "",
+                  "// AuthController currently double-wraps its response (a known, deliberately",
+                  "// unfixed limitation — see README's Implementation Status), so the token can",
+                  "// be at data.token OR data.data.token depending on whether that gets fixed",
+                  "// later. Handle both so this collection keeps working either way.",
+                  "const json = pm.response.json();",
+                  "const token = (json.data && json.data.token) || (json.data && json.data.data && json.data.data.token);",
+                  "",
+                  "pm.test('Token was captured from the response', function () {",
+                  "    pm.expect(token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "if (token) {",
+                  "    pm.collectionVariables.set('token', token);",
+                  "    console.log('Token captured into {{token}}');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Sanity check - no token (expect 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales", "host": ["{{baseUrl}}"], "path": ["api", "Sales"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - Sales - Create (discount tiers)",
+      "item": [
+        {
+          "name": "Create sale - 3 units (0% discount)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"saleDate\": \"2026-08-25T10:00:00Z\",\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerName\": \"Acme Corp\",\n  \"branchId\": \"22222222-2222-2222-2222-222222222222\",\n  \"branchName\": \"Downtown Branch\",\n  \"items\": [\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"productName\": \"Beer Can 350ml\", \"unitPrice\": 5.00, \"quantity\": 3 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Sales", "host": ["{{baseUrl}}"], "path": ["api", "Sales"] },
+            "description": "Used as the primary sale for the rest of the collection — its id/item id are captured into {{saleId}}/{{itemId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('No discount applied', function () {",
+                  "    pm.expect(json.data.items[0].discount).to.equal(0);",
+                  "});",
+                  "",
+                  "if (json.data && json.data.id) {",
+                  "    pm.collectionVariables.set('saleId', json.data.id);",
+                  "    pm.collectionVariables.set('itemId', json.data.items[0].id);",
+                  "    console.log('saleId/itemId captured for the rest of the collection');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create sale - 4 units (10% discount)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"saleDate\": \"2026-08-25T10:00:00Z\",\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerName\": \"Acme Corp\",\n  \"branchId\": \"22222222-2222-2222-2222-222222222222\",\n  \"branchName\": \"Downtown Branch\",\n  \"items\": [\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"productName\": \"Beer Can 350ml\", \"unitPrice\": 5.00, \"quantity\": 4 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Sales", "host": ["{{baseUrl}}"], "path": ["api", "Sales"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('10% discount applied, total is 18.00', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.items[0].discount).to.equal(0.10);",
+                  "    pm.expect(json.data.totalAmount).to.equal(18.00);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create sale - 15 units (20% discount)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"saleDate\": \"2026-08-25T10:00:00Z\",\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerName\": \"Acme Corp\",\n  \"branchId\": \"22222222-2222-2222-2222-222222222222\",\n  \"branchName\": \"Downtown Branch\",\n  \"items\": [\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"productName\": \"Beer Can 350ml\", \"unitPrice\": 5.00, \"quantity\": 15 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Sales", "host": ["{{baseUrl}}"], "path": ["api", "Sales"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('20% discount applied, total is 60.00', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.items[0].discount).to.equal(0.20);",
+                  "    pm.expect(json.data.totalAmount).to.equal(60.00);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create sale - 21 units (rejected)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"saleDate\": \"2026-08-25T10:00:00Z\",\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerName\": \"Acme Corp\",\n  \"branchId\": \"22222222-2222-2222-2222-222222222222\",\n  \"branchName\": \"Downtown Branch\",\n  \"items\": [\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"productName\": \"Beer Can 350ml\", \"unitPrice\": 5.00, \"quantity\": 21 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Sales", "host": ["{{baseUrl}}"], "path": ["api", "Sales"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Note: this rejection is caught by CreateSaleRequestValidator in the WebApi",
+                  "// layer BEFORE the request reaches MediatR, so the controller returns the raw",
+                  "// FluentValidation failures array here — NOT the { type, error, detail } shape",
+                  "// from ExceptionHandlingMiddleware (that shape only applies to errors that escape",
+                  "// all the way from the Application layer, e.g. a DomainException from Reactivate).",
+                  "pm.test('Status is 400, quantity validation failure', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const errors = pm.response.json();",
+                  "    pm.expect(errors).to.be.an('array');",
+                  "    pm.expect(errors[0].propertyName).to.include('Quantity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Sales - Read",
+      "item": [
+        {
+          "name": "Get sale by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List sales - paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales?_page=1&_size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"],
+              "query": [
+                { "key": "_page", "value": "1" },
+                { "key": "_size", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List sales - filter by customerId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales?customerId=11111111-1111-1111-1111-111111111111",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"],
+              "query": [{ "key": "customerId", "value": "11111111-1111-1111-1111-111111111111" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List sales - order by totalAmount desc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales?_order=totalAmount desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"],
+              "query": [{ "key": "_order", "value": "totalAmount desc" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List sales - filter cancelled=false",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales?cancelled=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales"],
+              "query": [{ "key": "cancelled", "value": "false" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Sales - Update",
+      "item": [
+        {
+          "name": "Update sale (full item replacement)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"saleDate\": \"2026-08-25T10:00:00Z\",\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerName\": \"Acme Corp Updated\",\n  \"branchId\": \"22222222-2222-2222-2222-222222222222\",\n  \"branchName\": \"Downtown Branch\",\n  \"items\": [\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"productName\": \"Beer Can 350ml\", \"unitPrice\": 5.00, \"quantity\": 9 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] },
+            "description": "Replaces the sale's items entirely — the old {{itemId}} captured earlier no longer exists after this call."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('10% discount applied for 9 units', function () {",
+                  "    pm.expect(pm.response.json().data.items[0].discount).to.equal(0.10);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.items && json.data.items.length) {",
+                  "    pm.collectionVariables.set('itemId', json.data.items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Sales - Cancel & Reactivate",
+      "item": [
+        {
+          "name": "Cancel sale",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}", "cancel"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and isCancelled is true', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data.isCancelled).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get sale - confirm cancelledAt is set",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('isCancelled true, cancelledAt not null', function () {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.isCancelled).to.equal(true);",
+                  "    pm.expect(data.cancelledAt).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reactivate sale",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}/reactivate", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}", "reactivate"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and isCancelled is false', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data.isCancelled).to.equal(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get sale - confirm cancelledAt is cleared",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('isCancelled false, cancelledAt null', function () {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.isCancelled).to.equal(false);",
+                  "    pm.expect(data.cancelledAt).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reactivate again (expect 400 - not cancelled)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}/reactivate", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}", "reactivate"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 BusinessRuleViolation', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().type).to.equal('BusinessRuleViolation');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Sales - Cancel item",
+      "item": [
+        {
+          "name": "Cancel item",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/Sales/{{saleId}}/items/{{itemId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "Sales", "{{saleId}}", "items", "{{itemId}}", "cancel"]
+            },
+            "description": "Uses {{itemId}}, refreshed by the Update request in folder 03 — run that first if this 404s."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and item isCancelled is true', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data.isCancelled).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Sales - Delete",
+      "item": [
+        {
+          "name": "Delete sale",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get sale - confirm 404 after delete",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/Sales/{{saleId}}", "host": ["{{baseUrl}}"], "path": ["api", "Sales", "{{saleId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 ResourceNotFound', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().type).to.equal('ResourceNotFound');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

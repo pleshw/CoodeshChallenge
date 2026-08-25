@@ -106,8 +106,7 @@ Runs the xUnit unit test suite (entity behavior, validators, and command handler
 * [General API](/.doc/general-api.md) — response envelope, error shape, and the pagination/ordering query contract
 * [Sales API](/.doc/sales-api.md) — the full Sales CRUD (this is the actual deliverable for this project)
 * [Manual Testing Guide](/.doc/manual-testing-guide.md) — step-by-step walkthrough (register, login, exercise every Sales endpoint, verify events) using curl or Swagger UI
-
-A Postman/Insomnia collection is not included; the Manual Testing Guide above is intended to cover manual testing instead for now.
+* [Postman Collection](/.doc/postman/Ambev.DeveloperEvaluation.postman_collection.json) — importable collection mirroring the Manual Testing Guide (register → login, with the JWT captured automatically → all four discount-tier creates → get/list/update → cancel/reactivate → cancel item → delete). Verified end-to-end with `newman run` against a live instance; re-runnable without manual cleanup (each run registers a fresh, timestamp-suffixed email)
 
 ## Implementation Status
 

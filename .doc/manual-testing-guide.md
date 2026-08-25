@@ -8,6 +8,11 @@ step). Assumes the stack is already running — see
 [Getting Started](../README.md#getting-started) if not (Postgres + RabbitMQ
 via `docker compose up -d`, migrations applied, `dotnet run`).
 
+Prefer clicking through Postman instead? Import
+[`postman/Ambev.DeveloperEvaluation.postman_collection.json`](./postman/Ambev.DeveloperEvaluation.postman_collection.json) —
+it's the same walkthrough below as a ready-to-run collection (login/token
+handling included), also runnable headlessly via `newman run`.
+
 All examples assume the API is at `http://localhost:5119` — adjust to
 whatever port your `dotnet run` prints.
 
