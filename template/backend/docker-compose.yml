@@ -10,7 +10,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=Host=ambev.developerevaluation.database;Port=5432;Database=developer_evaluation;Username=developer;Password=ev@luAt10n
       - ConnectionStrings__RabbitMq=amqp://developer:ev%40luAt10n@ambev.developerevaluation.messagebroker:5672
-      - ConnectionStrings__Redis=ambev.developerevaluation.cache:6379,password=ev@luAt10n,abortConnect=false
+      - ConnectionStrings__Redis=ambev.developerevaluation.cache:6379,password=ev@luAt10n,abortConnect=false,connectTimeout=300,syncTimeout=300,connectRetry=0
       - RUN_MIGRATIONS_ON_STARTUP=true
     ports:
       - "5119:8080"
