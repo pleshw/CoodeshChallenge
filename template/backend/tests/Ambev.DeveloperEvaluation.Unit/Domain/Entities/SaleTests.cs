@@ -111,6 +111,35 @@ public class SaleTests
         // Assert
         Assert.True(sale.IsCancelled);
         Assert.False(item.IsCancelled);
+        Assert.NotNull(sale.CancelledAt);
+    }
+
+    [Fact(DisplayName = "Reactivating a cancelled sale should clear IsCancelled and CancelledAt")]
+    public void Given_CancelledSale_When_Reactivated_Then_IsCancelledAndCancelledAtAreCleared()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateSaleWithoutItems();
+        sale.Cancel();
+
+        // Act
+        sale.Reactivate();
+
+        // Assert
+        Assert.False(sale.IsCancelled);
+        Assert.Null(sale.CancelledAt);
+    }
+
+    [Fact(DisplayName = "Reactivating a sale that is not cancelled should throw")]
+    public void Given_UncancelledSale_When_Reactivated_Then_ThrowsDomainException()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateSaleWithoutItems();
+
+        // Act
+        var act = () => sale.Reactivate();
+
+        // Assert
+        Assert.Throws<DomainException>(act);
     }
 
     [Fact(DisplayName = "Cancelling an item should exclude it from the sale total but not cancel the sale")]

@@ -29,5 +29,6 @@ public class MessagingModuleInitializer : IModuleInitializer
         builder.Services.AddRebusHandler<SaleModifiedEventHandler>();
         builder.Services.AddRebusHandler<SaleCancelledEventHandler>();
         builder.Services.AddRebusHandler<ItemCancelledEventHandler>();
+        builder.Services.AddRebusHandler<SaleReactivatedEventHandler>();
     }
 }

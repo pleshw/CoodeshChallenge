@@ -31,6 +31,13 @@ public class Sale : BaseEntity
 
     public bool IsCancelled { get; set; }
 
+    /// <summary>
+    /// When the sale was cancelled. Tracked separately from <see cref="UpdatedAt"/>
+    /// so cancellation timing survives later, unrelated updates, and so
+    /// <see cref="Reactivate"/> has a clear signal to clear.
+    /// </summary>
+    public DateTime? CancelledAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -85,6 +92,22 @@ public class Sale : BaseEntity
     public void Cancel()
     {
         IsCancelled = true;
+        CancelledAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Reverts a whole-sale cancellation. Does not touch individual cancelled
+    /// items — those remain cancelled and must be reactivated separately, if
+    /// that's ever needed.
+    /// </summary>
+    public void Reactivate()
+    {
+        if (!IsCancelled)
+            throw new DomainException("Sale is not cancelled.");
+
+        IsCancelled = false;
+        CancelledAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 

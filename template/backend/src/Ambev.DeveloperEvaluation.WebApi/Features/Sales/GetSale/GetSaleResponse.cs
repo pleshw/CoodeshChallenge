@@ -25,5 +25,7 @@ public class GetSaleResponse
 
     public bool IsCancelled { get; set; }
 
+    public DateTime? CancelledAt { get; set; }
+
     public List<SaleItemResponse> Items { get; set; } = [];
 }

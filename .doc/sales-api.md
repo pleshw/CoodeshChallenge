@@ -42,6 +42,7 @@ domains don't exist in this service.
       "branchName": "Downtown Branch",
       "totalAmount": 18.00,
       "isCancelled": false,
+      "cancelledAt": null,
       "items": [
         {
           "id": "guid",
@@ -107,14 +108,26 @@ domains don't exist in this service.
 - Errors: `404 ResourceNotFound` if the sale doesn't exist.
 
 #### POST /api/Sales/{id}/cancel
-- Description: Cancels the whole sale (`isCancelled = true`). Publishes a
-  `SaleCancelled` event to the application log. Does **not** cancel individual
-  items — cancelling an item is a separate action.
+- Description: Cancels the whole sale (`isCancelled = true`), stamping
+  `cancelledAt` with the current time. Publishes a `SaleCancelled` event to
+  the application log. Does **not** cancel individual items — cancelling an
+  item is a separate action.
 - Response `200 OK`:
   ```json
   { "data": { "id": "guid", "saleNumber": "string", "isCancelled": true }, "success": true, "message": "Sale cancelled successfully", "errors": [] }
   ```
 - Errors: `404 ResourceNotFound` if the sale doesn't exist.
+
+#### POST /api/Sales/{id}/reactivate
+- Description: Reverts a whole-sale cancellation (`isCancelled = false`,
+  `cancelledAt` cleared back to `null`). Publishes a `SaleReactivated` event
+  to the application log. Does **not** reactivate individually cancelled
+  items — that's a separate concern, and there's no endpoint for it today.
+- Response `200 OK`:
+  ```json
+  { "data": { "id": "guid", "saleNumber": "string", "isCancelled": false }, "success": true, "message": "Sale reactivated successfully", "errors": [] }
+  ```
+- Errors: `404 ResourceNotFound` if the sale doesn't exist; `400 BusinessRuleViolation` if the sale isn't currently cancelled.
 
 #### POST /api/Sales/{id}/items/{itemId}/cancel
 - Description: Cancels a single item within a sale. The sale's `totalAmount`
@@ -128,7 +141,8 @@ domains don't exist in this service.
 
 ### Domain Events
 
-`SaleCreated`, `SaleModified`, `SaleCancelled` and `ItemCancelled` are
+`SaleCreated`, `SaleModified`, `SaleCancelled`, `ItemCancelled` and
+`SaleReactivated` are
 published to a `sales-events` queue on RabbitMQ via [Rebus](https://github.com/rebus-org/Rebus)
 after each corresponding write succeeds. The same process also subscribes to
 and consumes those events (see `Program.cs`'s startup `bus.Subscribe<T>()`

@@ -61,6 +61,7 @@ public class Program
             await bus.Subscribe<SaleModifiedEvent>();
             await bus.Subscribe<SaleCancelledEvent>();
             await bus.Subscribe<ItemCancelledEvent>();
+            await bus.Subscribe<SaleReactivatedEvent>();
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
 

@@ -11,6 +11,7 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CancelSaleItem;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.DeleteSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSale;
+using Ambev.DeveloperEvaluation.WebApi.Features.Sales.ReactivateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.UpdateSale;
 using AutoMapper;
 using MediatR;
@@ -215,6 +216,33 @@ public class SalesController : BaseController
             Success = true,
             Message = "Sale cancelled successfully",
             Data = _mapper.Map<CancelSaleResponse>(response)
+        });
+    }
+
+    /// <summary>
+    /// Reverts a whole-sale cancellation
+    /// </summary>
+    [HttpPost("{id}/reactivate")]
+    [ProducesResponseType(typeof(ApiResponseWithData<ReactivateSaleResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReactivateSale([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var request = new ReactivateSaleRequest { Id = id };
+        var validator = new ReactivateSaleRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = _mapper.Map<Application.Sales.ReactivateSale.ReactivateSaleCommand>(request.Id);
+        var response = await _mediator.Send(command, cancellationToken);
+
+        return StatusCode(StatusCodes.Status200OK, new ApiResponseWithData<ReactivateSaleResponse>
+        {
+            Success = true,
+            Message = "Sale reactivated successfully",
+            Data = _mapper.Map<ReactivateSaleResponse>(response)
         });
     }
 

@@ -112,10 +112,10 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 
 **Implemented:**
 
-* Full Sales CRUD (create, get by id, paginated/filtered list, update, delete) plus dedicated cancel-sale and cancel-item actions
+* Full Sales CRUD (create, get by id, paginated/filtered list, update, delete) plus dedicated cancel-sale, cancel-item, and reactivate-sale actions
 * External Identities pattern for Customer/Branch/Product (denormalized id + name, no cross-domain foreign keys)
 * Quantity-based discount business rules, enforced both by request validation and as a domain invariant on the `Sale` aggregate (see [Sale.cs](/template/backend/src/Ambev.DeveloperEvaluation.Domain/Entities/Sale.cs))
-* `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` events, published to RabbitMQ via Rebus and consumed by dedicated handlers that write to the application log
+* `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` / `SaleReactivated` events, published to RabbitMQ via Rebus and consumed by dedicated handlers that write to the application log
 * Standardized `{ type, error, detail }` error responses for not-found, business-rule-violation, and authentication-failure cases
 * Unit tests covering the discount tiers, cancellation behavior, validators, and command handlers
 
