@@ -111,7 +111,7 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 * External Identities pattern for Customer/Branch/Product (denormalized id + name, no cross-domain foreign keys)
 * Quantity-based discount business rules, enforced both by request validation and as a domain invariant on the `Sale` aggregate (see [Sale.cs](/template/backend/src/Ambev.DeveloperEvaluation.Domain/Entities/Sale.cs))
 * `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` events, published via MediatR and written to the application log
-* Standardized `{ type, error, detail }` error responses for not-found and business-rule-violation cases
+* Standardized `{ type, error, detail }` error responses for not-found, business-rule-violation, and authentication-failure cases
 * Unit tests covering the discount tiers, cancellation behavior, validators, and command handlers
 
 **Known limitations / what I'd do with more time:**
@@ -120,6 +120,7 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 * List filtering supports pagination, ordering, cancelled/customer/branch/date-range filters, but not the full generic wildcard/`_min`/`_max` query contract described in [General API](/.doc/general-api.md)
 * Only unit tests are included; the `tests/Ambev.DeveloperEvaluation.Integration` and `tests/Ambev.DeveloperEvaluation.Functional` projects are still empty scaffolding
 * MongoDB and Redis services are defined in `docker-compose.yml` but unused — PostgreSQL via EF Core was the chosen data store
+* The `Sales` endpoints' JSON responses were fixed to avoid a double-wrapping bug in `BaseController`'s response helpers; the same fix hasn't been applied to the pre-existing `Users`/`Auth` endpoints, which still return a nested `data.data` envelope
 
 ## Overview
 This section provides a high-level overview of the project and the various skills and competencies it aims to assess for developer candidates. 
