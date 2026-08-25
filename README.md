@@ -105,8 +105,9 @@ Runs the xUnit unit test suite (entity behavior, validators, and command handler
 
 * [General API](/.doc/general-api.md) — response envelope, error shape, and the pagination/ordering query contract
 * [Sales API](/.doc/sales-api.md) — the full Sales CRUD (this is the actual deliverable for this project)
+* [Manual Testing Guide](/.doc/manual-testing-guide.md) — step-by-step walkthrough (register, login, exercise every Sales endpoint, verify events) using curl or Swagger UI
 
-A Postman/Insomnia collection is not included; the endpoint documentation above with example requests/responses is intended to cover manual testing.
+A Postman/Insomnia collection is not included; the Manual Testing Guide above is intended to cover manual testing instead for now.
 
 ## Implementation Status
 
@@ -117,6 +118,7 @@ A Postman/Insomnia collection is not included; the endpoint documentation above 
 * Quantity-based discount business rules, enforced both by request validation and as a domain invariant on the `Sale` aggregate (see [Sale.cs](/template/backend/src/Ambev.DeveloperEvaluation.Domain/Entities/Sale.cs))
 * `SaleCreated` / `SaleModified` / `SaleCancelled` / `ItemCancelled` / `SaleReactivated` events, published to RabbitMQ via Rebus and consumed by dedicated handlers that write to the application log
 * All `/api/Sales` endpoints require a JWT (`[Authorize]`); Swagger's **Authorize** button is wired up with a Bearer scheme, so the padlock appears on every protected endpoint and you can paste a token obtained from `POST /api/Auth`
+  * This was a deliberate decision: the Users/Auth feature (and its `Role` enum) already existed in the template, but nothing consumed the JWT it issued — no endpoint checked it. Rather than leave a working login system fully disconnected, I wired it into the Sales endpoints, the actual deliverable of this project. Note it only requires *any* authenticated user today — it doesn't yet restrict by `Role` (e.g. only `Manager`/`Admin` can cancel a sale); that would be a natural next step but wasn't required for this challenge
 * Standardized `{ type, error, detail }` error responses for not-found, business-rule-violation, and authentication-failure cases
 * Unit tests covering the discount tiers, cancellation behavior, validators, and command handlers
 
