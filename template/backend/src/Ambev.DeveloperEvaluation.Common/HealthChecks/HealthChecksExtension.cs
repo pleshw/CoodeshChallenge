@@ -22,16 +22,12 @@ public static class HealthChecksExtension
     /// </summary>
     /// <param name="builder">The <see cref="WebApplicationBuilder"/> to add the health checks to.</param>
     /// <remarks>
-    /// This method adds two basic health checks:
-    /// <list type="bullet">
-    /// <item>
-    /// <description>"Liveness": A simple check that always returns healthy, tagged with "liveness".</description>
-    /// </item>
-    /// <item>
-    /// <description>"Readiness": A simple check that always returns healthy, tagged with "readiness".</description>
-    /// </item>
-    /// </list>
-    /// These checks can be used to verify the basic operational status of the application.
+    /// Adds the "Liveness" check ("is this process alive", tagged "liveness") —
+    /// deliberately dependency-free, since a liveness probe should never fail
+    /// because a downstream service (database, broker) is unreachable. Real,
+    /// dependency-checking "readiness" checks (Postgres, RabbitMQ) are
+    /// registered separately in the WebApi project, where those dependencies'
+    /// types are available — see <c>Program.cs</c>.
     /// </remarks>
     /// <example>
     /// This method can be used in Program.cs:
@@ -43,8 +39,7 @@ public static class HealthChecksExtension
     public static void AddBasicHealthChecks(this WebApplicationBuilder builder)
     {
         builder.Services.AddHealthChecks()
-            .AddCheck("Liveness", () => HealthCheckResult.Healthy(), tags: ["liveness"])
-            .AddCheck("Readiness", () => HealthCheckResult.Healthy(), tags: ["readiness"]);
+            .AddCheck("Liveness", () => HealthCheckResult.Healthy(), tags: ["liveness"]);
     }
 
     /// <summary>
