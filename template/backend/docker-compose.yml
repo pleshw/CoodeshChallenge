@@ -10,6 +10,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=Host=ambev.developerevaluation.database;Port=5432;Database=developer_evaluation;Username=developer;Password=ev@luAt10n
       - ConnectionStrings__RabbitMq=amqp://developer:ev%40luAt10n@ambev.developerevaluation.messagebroker:5672
+      - ConnectionStrings__Redis=ambev.developerevaluation.cache:6379,password=ev@luAt10n,abortConnect=false
       - RUN_MIGRATIONS_ON_STARTUP=true
     ports:
       - "5119:8080"
@@ -66,8 +67,6 @@ services:
     container_name: ambev_developer_evaluation_cache
     image: redis:7.4.1-alpine
     command: redis-server --requirepass ev@luAt10n
-    environment:
-       MONGO_INITDB_ROOT_USERNAME: developer
-       MONGO_INITDB_ROOT_PASSWORD: ev@luAt10n
     ports:
-       - "6379"
+       - "6379:6379"
+    restart: unless-stopped

@@ -15,6 +15,7 @@
 	  <PackageReference Include="Rebus" Version="8.9.3" />
 	  <PackageReference Include="Rebus.RabbitMq" Version="10.1.1" />
 	  <PackageReference Include="Rebus.ServiceProvider" Version="10.7.2" />
+	  <PackageReference Include="StackExchange.Redis" Version="3.1.31" />
 	</ItemGroup>
 	
 	<ItemGroup>
