@@ -1,5 +1,6 @@
 using Ambev.DeveloperEvaluation.Application.Events;
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
+using Ambev.DeveloperEvaluation.Application.Sales.Common;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentAssertions;
@@ -16,13 +17,15 @@ public class CancelSaleItemHandlerTests
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IBus _bus;
+    private readonly ISalesListCache _cache;
     private readonly CancelSaleItemHandler _handler;
 
     public CancelSaleItemHandlerTests()
     {
         _saleRepository = Substitute.For<ISaleRepository>();
         _bus = Substitute.For<IBus>();
-        _handler = new CancelSaleItemHandler(_saleRepository, _bus);
+        _cache = Substitute.For<ISalesListCache>();
+        _handler = new CancelSaleItemHandler(_saleRepository, _bus, _cache);
 
         _saleRepository.UpdateAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.Arg<Sale>());
@@ -89,5 +92,6 @@ public class CancelSaleItemHandlerTests
         result.SaleTotalAmount.Should().Be(item2.TotalAmount);
         sale.IsCancelled.Should().BeFalse();
         await _bus.Received(1).Publish(Arg.Any<ItemCancelledEvent>());
+        await _cache.Received(1).InvalidateAsync(Arg.Any<CancellationToken>());
     }
 }

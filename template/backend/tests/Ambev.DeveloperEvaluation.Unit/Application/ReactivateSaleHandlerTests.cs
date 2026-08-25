@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Application.Events;
+using Ambev.DeveloperEvaluation.Application.Sales.Common;
 using Ambev.DeveloperEvaluation.Application.Sales.ReactivateSale;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
@@ -18,6 +19,7 @@ public class ReactivateSaleHandlerTests
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
     private readonly IBus _bus;
+    private readonly ISalesListCache _cache;
     private readonly ReactivateSaleHandler _handler;
 
     public ReactivateSaleHandlerTests()
@@ -25,7 +27,8 @@ public class ReactivateSaleHandlerTests
         _saleRepository = Substitute.For<ISaleRepository>();
         _mapper = Substitute.For<IMapper>();
         _bus = Substitute.For<IBus>();
-        _handler = new ReactivateSaleHandler(_saleRepository, _mapper, _bus);
+        _cache = Substitute.For<ISalesListCache>();
+        _handler = new ReactivateSaleHandler(_saleRepository, _mapper, _bus, _cache);
 
         _saleRepository.UpdateAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.Arg<Sale>());
@@ -85,5 +88,6 @@ public class ReactivateSaleHandlerTests
         sale.IsCancelled.Should().BeFalse();
         sale.CancelledAt.Should().BeNull();
         await _bus.Received(1).Publish(Arg.Any<SaleReactivatedEvent>());
+        await _cache.Received(1).InvalidateAsync(Arg.Any<CancellationToken>());
     }
 }

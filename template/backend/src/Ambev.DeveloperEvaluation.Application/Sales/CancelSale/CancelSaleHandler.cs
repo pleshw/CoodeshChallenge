@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Application.Events;
+using Ambev.DeveloperEvaluation.Application.Sales.Common;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using AutoMapper;
 using FluentValidation;
@@ -15,12 +16,14 @@ public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleRe
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
     private readonly IBus _bus;
+    private readonly ISalesListCache _cache;
 
-    public CancelSaleHandler(ISaleRepository saleRepository, IMapper mapper, IBus bus)
+    public CancelSaleHandler(ISaleRepository saleRepository, IMapper mapper, IBus bus, ISalesListCache cache)
     {
         _saleRepository = saleRepository;
         _mapper = mapper;
         _bus = bus;
+        _cache = cache;
     }
 
     public async Task<CancelSaleResult> Handle(CancelSaleCommand request, CancellationToken cancellationToken)
@@ -37,6 +40,7 @@ public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleRe
         sale.Cancel();
 
         var cancelledSale = await _saleRepository.UpdateAsync(sale, cancellationToken);
+        await _cache.InvalidateAsync(cancellationToken);
 
         await _bus.Publish(new SaleCancelledEvent(cancelledSale.Id, cancelledSale.SaleNumber));
 

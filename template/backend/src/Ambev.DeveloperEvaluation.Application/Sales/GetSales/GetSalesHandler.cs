@@ -1,3 +1,4 @@
+using Ambev.DeveloperEvaluation.Application.Sales.Common;
 using Ambev.DeveloperEvaluation.Application.Sales.GetSale;
 using Ambev.DeveloperEvaluation.Common.Pagination;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
@@ -14,11 +15,13 @@ public class GetSalesHandler : IRequestHandler<GetSalesCommand, PagedResult<GetS
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
+    private readonly ISalesListCache _cache;
 
-    public GetSalesHandler(ISaleRepository saleRepository, IMapper mapper)
+    public GetSalesHandler(ISaleRepository saleRepository, IMapper mapper, ISalesListCache cache)
     {
         _saleRepository = saleRepository;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<PagedResult<GetSaleResult>> Handle(GetSalesCommand request, CancellationToken cancellationToken)
@@ -28,6 +31,10 @@ public class GetSalesHandler : IRequestHandler<GetSalesCommand, PagedResult<GetS
 
         if (!validationResult.IsValid)
             throw new ValidationException(validationResult.Errors);
+
+        var cached = await _cache.GetAsync(request, cancellationToken);
+        if (cached is not null)
+            return cached;
 
         var (sales, totalCount) = await _saleRepository.GetPagedAsync(
             request.PageNumber,
@@ -41,12 +48,16 @@ public class GetSalesHandler : IRequestHandler<GetSalesCommand, PagedResult<GetS
             request.Descending,
             cancellationToken);
 
-        return new PagedResult<GetSaleResult>
+        var result = new PagedResult<GetSaleResult>
         {
             Items = _mapper.Map<IEnumerable<GetSaleResult>>(sales),
             TotalCount = totalCount,
             PageNumber = request.PageNumber,
             PageSize = request.PageSize
         };
+
+        await _cache.SetAsync(request, result, cancellationToken);
+
+        return result;
     }
 }

@@ -20,6 +20,7 @@ public class CreateSaleHandlerTests
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
     private readonly IBus _bus;
+    private readonly ISalesListCache _cache;
     private readonly CreateSaleHandler _handler;
 
     public CreateSaleHandlerTests()
@@ -27,7 +28,8 @@ public class CreateSaleHandlerTests
         _saleRepository = Substitute.For<ISaleRepository>();
         _mapper = Substitute.For<IMapper>();
         _bus = Substitute.For<IBus>();
-        _handler = new CreateSaleHandler(_saleRepository, _mapper, _bus);
+        _cache = Substitute.For<ISalesListCache>();
+        _handler = new CreateSaleHandler(_saleRepository, _mapper, _bus, _cache);
 
         _saleRepository.CreateAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.Arg<Sale>());
@@ -107,6 +109,23 @@ public class CreateSaleHandlerTests
 
         // Then
         await _bus.Received(1).Publish(Arg.Any<SaleCreatedEvent>());
+    }
+
+    /// <summary>
+    /// Tests that creating a sale invalidates the Sales list cache.
+    /// </summary>
+    [Fact(DisplayName = "Given valid sale When created Then invalidates the sales list cache")]
+    public async Task Handle_ValidRequest_InvalidatesSalesListCache()
+    {
+        // Given
+        var command = CreateSaleHandlerTestData.GenerateValidCommand();
+        _mapper.Map<CreateSaleResult>(Arg.Any<Sale>()).Returns(new CreateSaleResult { Id = Guid.NewGuid() });
+
+        // When
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Then
+        await _cache.Received(1).InvalidateAsync(Arg.Any<CancellationToken>());
     }
 
     /// <summary>

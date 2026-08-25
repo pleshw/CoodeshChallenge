@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Application.Events;
+using Ambev.DeveloperEvaluation.Application.Sales.Common;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using AutoMapper;
@@ -16,12 +17,14 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
     private readonly IBus _bus;
+    private readonly ISalesListCache _cache;
 
-    public CreateSaleHandler(ISaleRepository saleRepository, IMapper mapper, IBus bus)
+    public CreateSaleHandler(ISaleRepository saleRepository, IMapper mapper, IBus bus, ISalesListCache cache)
     {
         _saleRepository = saleRepository;
         _mapper = mapper;
         _bus = bus;
+        _cache = cache;
     }
 
     public async Task<CreateSaleResult> Handle(CreateSaleCommand command, CancellationToken cancellationToken)
@@ -46,6 +49,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
             sale.AddItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity);
 
         var createdSale = await _saleRepository.CreateAsync(sale, cancellationToken);
+        await _cache.InvalidateAsync(cancellationToken);
 
         await _bus.Publish(new SaleCreatedEvent(createdSale.Id, createdSale.SaleNumber));
 
